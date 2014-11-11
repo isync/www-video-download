@@ -104,7 +104,7 @@ sub parse_ntv {
 		$urls->{mp4} = 'http://video.n-tv.de' . $1;
 	}
 
-	print "Video::Download::parse_ntv: m3u:$urls->{m3u8} mp4:$urls->{mp4} \n";
+	print "Video::Download::parse_ntv: m3u:$urls->{m3u} mp4:$urls->{mp4} \n";
 	return $urls;
 }
 
@@ -118,7 +118,7 @@ sub parse_m3u {
 	print "Video::Download::parse_m3u: parsing playlist\n";
 
 	my @lines = split(/\n/,$playlist);
-	die "Video::Download::parse_m3u8: passed playlist does not look to be a properly formatted m3u(8) file!" unless $lines[0] =~ /^#EXTM3U/;
+	die "Video::Download::parse_m3u: passed playlist does not look to be a properly formatted m3u(8) file!" unless $lines[0] =~ /^#EXTM3U/;
 	my @m3u;
 	for my $i (0..$#lines){
 		my $line = $lines[$i];
