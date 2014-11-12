@@ -16,3 +16,6 @@ Somehow, weather videos are treated differently on N24's website - they never po
 
 This script preceded the n-tv-download script - that's why the code is less organized.
 
+#### euronews-downloader.pl
+
+Very simple automation script: parses the HTML of a typical Euronews video page and extracts the mp4 link. LWP then downloads it to cwd.
