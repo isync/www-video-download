@@ -12,7 +12,7 @@ Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser 
 
 #### n24-downloader.pl
 
-Categories in N24's Mediathek are somehow messed up: Videos filed under 'Nachrichten', or the special category 'Wetter', either are buried so deep in 'Mediathek' you'll never find them there or they don't show up at all. Anyway, this script downloads n24 videos, once you were able to find a sepcific one.
+Categories in N24's Mediathek are somehow messed up: Videos filed under 'Nachrichten', or the special category 'Wetter', either are buried so deep in 'Mediathek' you'll never find them there or they don't show up at all. Anyway, this script downloads N24 videos, once you were able to find a specific one.
 
 This script preceded the n-tv-download script - that's why the code is less organized.
 
