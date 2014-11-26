@@ -7,14 +7,17 @@ use LWP::UserAgent;
 use POSIX;
 use HTTP::Date;
 
+my $url = shift(@ARGV) || 'http://www.n24.de/n24/Nachrichten/Wetter/';
+
+print "URL: $url \n";
 my $ua = LWP::UserAgent->new;
-my $response = $ua->get('http://www.n24.de/n24/Nachrichten/Wetter/');
+my $response = $ua->get($url);
  
 die unless $response->is_success;
 
 if($response->decoded_content =~ /\Q_n24VideoCfg.html5.videoMp4Source = "\E([^"]+)\Q";\E/){
-	my $url = $1;
-	print "URL $url \n";
+	my $playlist_url = $1;
+	print "Playlist: $playlist_url \n";
 
 	$response = $ua->get($1);
 
@@ -31,7 +34,7 @@ if($response->decoded_content =~ /\Q_n24VideoCfg.html5.videoMp4Source = "\E([^"]
 
 	my $filename_beginning = substr($filename,0,5);
 
-	my ($url_fragment) = split(/$filename_beginning/,$url);
+	my ($url_fragment) = split(/$filename_beginning/,$playlist_url);
 
 	print "$url_fragment $filename \n";
 

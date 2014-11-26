@@ -10,9 +10,9 @@ Throw any n-tv.de URL with /mediathek/ or /video/ as part of its path at it, and
 
 Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser implementation on CPAN.
 
-#### n24-wetter-downloader.pl
+#### n24-downloader.pl
 
-Somehow, weather videos are treated differently on N24's website - they never pop up in the Mediathek. So this script does only what its name implies: download today's weather forecast video.
+Categories in N24's Mediathek are somehow messed up: Videos filed under 'Nachrichten', or the special category 'Wetter', either are buried so deep in 'Mediathek' you'll never find them there or they don't show up at all. Anyway, this script downloads n24 videos, once you were able to find a sepcific one.
 
 This script preceded the n-tv-download script - that's why the code is less organized.
 
