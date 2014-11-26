@@ -6,14 +6,22 @@ use warnings;
 use LWP::UserAgent;
 use POSIX;
 use HTTP::Date;
+use Path::Tiny;
 
 my $url = shift(@ARGV) || 'http://www.n24.de/n24/Nachrichten/Wetter/';
 
-print "URL: $url \n";
+	print "WWW::Video::Download: $url \n";
+
+	unless($url =~ /www\.n24\.de/){
+		print " This doesn't look like a valid N24 URL. Skipped. \n";
+		exit;
+	}
+
+
 my $ua = LWP::UserAgent->new;
 my $response = $ua->get($url);
  
-die unless $response->is_success;
+die "Error fetching URL:$url" unless $response->is_success;
 
 if($response->decoded_content =~ /\Q_n24VideoCfg.html5.videoMp4Source = "\E([^"]+)\Q";\E/){
 	my $playlist_url = $1;
@@ -53,11 +61,19 @@ if($response->decoded_content =~ /\Q_n24VideoCfg.html5.videoMp4Source = "\E([^"]
 		push(@files, $_);
 	}
 
-	my $stamp = $response->header('Date');
-	$stamp = HTTP::Date::str2time($stamp);
-	$stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
-	
-	system("cat @files > N24-Wetter_$stamp.mp4");
+	my $output_filename;
+	if($url =~ /n24\/Nachrichten\/Wetter\//){
+		my $stamp = $response->header('Date');
+		$stamp = HTTP::Date::str2time($stamp);
+		$stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
+
+		$output_filename = "N24-Wetter_$stamp.mp4";
+	}else{
+		$output_filename = path($url)->basename(qr/.html/) . '.mp4';
+	}
+
+	print "WWW::Video::Download: writing to file $output_filename \n";
+	system("cat @files > $output_filename");
 
 	for(@files){
 		print " remove: $_ \n";
