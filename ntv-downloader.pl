@@ -26,7 +26,7 @@ while( my $url = shift(@ARGV) ){
 
 	## dl m3u8
 	my $response = $ua->get($urls->{m3u});
-	die "Error fetching playlist ". $response->status_line unless $response->is_success;
+	die "Error fetching playlist index ". $response->status_line unless $response->is_success;
 	my $variants_playlist = $response->decoded_content;
 
 	my @variants_playlist = parse_m3u($variants_playlist, $urls->{m3u});
