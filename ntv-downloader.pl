@@ -13,6 +13,7 @@ use Path::Tiny;
 die "Please supply a n-tv URL on command-line" unless @ARGV;
 
 our $ua = LWP::UserAgent->new;
+$ua->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
 while( my $url = shift(@ARGV) ){
 	print "WWW::Video::Download: $url \n";
@@ -43,7 +44,6 @@ while( my $url = shift(@ARGV) ){
 
 	my @playlist = parse_m3u($playlist, $selected->{uri});
 
-
 	## dl fragments to temp files, concatenate them and remove temp files
 	my @done;
 	for(@playlist){
@@ -57,6 +57,7 @@ while( my $url = shift(@ARGV) ){
 		}
 	}
 
+	## fabricate output filename
 	# my $stamp = $response->header('Date');
 	# $stamp = HTTP::Date::str2time($stamp);
 	# $stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
