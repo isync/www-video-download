@@ -45,6 +45,8 @@ while( my $url = shift(@ARGV) ){
 	my @playlist = parse_m3u($playlist, $selected->{uri});
 
 	## dl fragments to temp files, concatenate them and remove temp files
+	# $ua->default_header()->remove_header('Accept-Encoding');
+	delete($ua->{def_headers}->{'accept-encoding'});
 	my @done;
 	for(@playlist){
 		print " dl: $_->{uri} \n";
