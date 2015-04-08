@@ -4,24 +4,27 @@ use strict;
 use warnings;
 
 use LWP::UserAgent;
-use POSIX;
-use HTTP::Date;
+use URI;
 use Path::Tiny;
+use JSON;
 
-die "Please supply a N24 URL on command-line" unless @ARGV;
+# use POSIX;
+# use HTTP::Date;
+
+die "Please supply a Bloomberg URL on command-line" unless @ARGV;
 
 our $ua = LWP::UserAgent->new;
-# $ua->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+$ua->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
 while( my $url = shift(@ARGV) ){
 	print "WWW::Video::Download: $url \n";
 
-	unless($url =~ /www\.n24\.de/){
-		print " This doesn't look like a valid N24 URL. Skipped. \n";
-		exit;
+	unless($url =~ /bloomberg\.com/ && $url =~ /\/videos\//){
+		print " This doesn't look like a valid Bloomberg video URL. Skipped. \n";
+		next;
 	}
 
-	my $urls = parse_n24($url);
+	my $urls = parse_bloomberg($url);
 
 	## dl m3u8
 	my $response = $ua->get($urls->{m3u});
@@ -47,8 +50,9 @@ while( my $url = shift(@ARGV) ){
 	# $ua->default_header()->remove_header('Accept-Encoding');
 	delete($ua->{def_headers}->{'accept-encoding'});
 	my @done;
+	my $cnt = 1;
 	for(@playlist){
-		print " dl: $_->{uri} \n";
+		print " dl ($cnt of ". scalar(@playlist) ."): $_->{uri} \n";
 
 		my $filename = path($_->{path})->basename;
 		$response = $ua->get($_->{uri}, ':content_file' => $filename );
@@ -56,19 +60,15 @@ while( my $url = shift(@ARGV) ){
 		if($response->is_success){
 			push(@done, $filename);
 		}
+		$cnt++;
 	}
 
 	## fabricate output filename
-	my $output_filename;
-	if($url =~ /n24\/Nachrichten\/Wetter\//){
-		my $stamp = $response->header('Date');
-		$stamp = HTTP::Date::str2time($stamp);
-		$stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
+	# my $stamp = $response->header('Date');
+	# $stamp = HTTP::Date::str2time($stamp);
+	# $stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
 
-		$output_filename = "N24-Wetter_$stamp.mp4";
-	}else{
-		$output_filename = path($url)->basename(qr/.html/) . '.mp4'; # Path::Tiny removes '.html' only with version > 0.054
-	}
+	my $output_filename = path($url)->basename(qr/.html/) . '.mp4'; # Path::Tiny removes '.html' only with version > 0.054
 
 	print "WWW::Video::Download: writing to file $output_filename \n";
 	system("cat @done > $output_filename");
@@ -81,29 +81,53 @@ while( my $url = shift(@ARGV) ){
 	die "Some fragments were not downloaded properly" unless @done == @playlist;
 }
 
-# expects a N24 URL,
+# expects a bloomberg URL,
 # returns a hashref with absolute video URLs and playlists
-sub parse_n24 {
-	print "WWW::Video::Download: GET:$_[0] \n";
+sub parse_bloomberg {
+	print "WWW::Video::Download: (HTML page) GET:$_[0] \n";
 	my $response = $ua->get(shift);
  
 	die unless $response->is_success;
 
 	my $html = $response->decoded_content;
 
-	#				_n24VideoCfg.html5.videoMp4Source = "http://n24video-vod.dcp.adaptive.level3.net/cm2013/cmp/dd ...";
-	#				_n24VideoCfg.html5.videoOgvSource = "---";
-	#				_n24VideoCfg.html5.videoWebmSurce = "---";
+	$html =~ /"bmmrId":"([^"]+)",/;
 
-	$html =~ /\Q_n24VideoCfg.html5.videoMp4Source = "\E([^"]+)\Q";\E/;
+	die "Could not extract BMMR id" unless $1;
 
-	die "Could not extract playlist URL" unless $1;
+	my $api_url = 'http://www.bloomberg.com/api/embed?id='. $1 .'&version=v0.8.11&idType=BMMR';
+
+	print "WWW::Video::Download: (JSON embed config) GET:$api_url \n";
+	$response = $ua->get($api_url);
+ 
+	die unless $response->is_success;
+
+	my $json = $response->decoded_content;
+	my $embed_metadata = decode_json($json);
 
 	my $urls = {
-		m3u	=> $1,
+		mp4_low	=> $embed_metadata->{contentLoc},	# a low quality version is simply referenced
 	};
 
-	print "WWW::Video::Download::parse_n24: m3u:$urls->{m3u} \n";
+	# look for m3u8
+	if($embed_metadata && $embed_metadata->{streams} && ref($embed_metadata->{streams}) eq 'ARRAY'){
+		for(@{ $embed_metadata->{streams} }){
+			if($_->{url} =~ /\.m3u8$/){
+				$urls->{m3u} = $_->{url};	# a multi-bitrate m3u8 for iPads is also there
+				last;
+			}
+		}
+	}
+
+	# see what else we can get
+	my @xml_urls = $embed_metadata->{xml} =~ /<file>([^<]+)<\/file>/g;
+	for my $i (0..$#xml_urls){
+		my $fragment = $xml_urls[$i];
+		$fragment =~ s/^origin:\/\///;
+		$urls->{'url_'.$i} = 'http://bloomberg.map.fastly.net/' . $fragment;
+	}
+
+	print "WWW::Video::Download::parse_ntv: m3u:$urls->{m3u} mp4_low:$urls->{mp4_low} \n";
 	return $urls;
 }
 

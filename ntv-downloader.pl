@@ -37,6 +37,7 @@ while( my $url = shift(@ARGV) ){
 	my $selected = shift(@by_bandwidth);
 
 	## dl m3u8
+	print "WWW::Video::Download: GET:$selected->{uri} \n";
 	$response = undef;
 	$response = $ua->get($selected->{uri});
 	die "Error fetching playlist ". $response->status_line unless $response->is_success;
@@ -64,7 +65,7 @@ while( my $url = shift(@ARGV) ){
 	# $stamp = HTTP::Date::str2time($stamp);
 	# $stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
 
-	my $output_filename = path($url)->basename(qr/.html/) . '.mp4';
+	my $output_filename = path($url)->basename(qr/.html/) . '.mp4'; # Path::Tiny removes '.html' only with version > 0.054
 
 	print "WWW::Video::Download: writing to file $output_filename \n";
 	system("cat @done > $output_filename");
@@ -80,6 +81,7 @@ while( my $url = shift(@ARGV) ){
 # expects a n-tv URL,
 # returns a hashref with absolute video URLs and playlists
 sub parse_ntv {
+	print "WWW::Video::Download: GET:$_[0] \n";
 	my $response = $ua->get(shift);
  
 	die unless $response->is_success;
