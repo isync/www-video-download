@@ -16,6 +16,39 @@ die "Please supply a Bloomberg URL on command-line" unless @ARGV;
 our $ua = LWP::UserAgent->new;
 $ua->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
+## Make LWP::UA behave "atomically" on existing+complete downloads
+$ua->add_handler( response_header => sub {
+	my($response, $ua, $h) = @_;
+
+	if($ua->{hello_ua_next_filename}){ # this tells us the user appended triple dash to the current dl-filename, and we'll handle it atomically
+# when current-dl-file and "next_filename" is the same, this here would not work:
+# because, when this handler is fired, the file is already truncated to zero size
+		if(-f $ua->{hello_ua_next_filename}){
+			print STDOUT " file exists ($ua->{hello_ua_next_filename}, ". (-s $ua->{hello_ua_next_filename}) ."): comparing size... ";
+			if(-s $ua->{hello_ua_next_filename} == $response->content_length()){	# same as $response->header('Content-Length')
+				print STDOUT " file seems complete. Skipping. \n";
+				$ua->{discard_download} = 1;
+				die();
+			}else{
+				print STDOUT " file seems incomplete (".(-s $ua->{hello_ua_next_filename}) .' vs '. $response->content_length() ."). Re-downloading. \n";
+			}
+		}
+	}
+});
+$ua->add_handler( response_done => sub {
+	my($response, $ua, $h) = @_;
+
+	if($ua->{hello_ua_next_filename} && $ua->{discard_download}){
+		# nothing has been downloaded, the current temp file is empty, just delete it, don't clobber existing file with it
+		unlink($ua->{hello_ua_next_filename}.'___');
+		delete($ua->{discard_download});
+	}else{
+		rename($ua->{hello_ua_next_filename}.'___', $ua->{hello_ua_next_filename}) if $ua->{hello_ua_next_filename}; # remedy temp file
+	}
+
+	delete($ua->{hello_ua_next_filename}) if $ua->{hello_ua_next_filename};
+});
+
 while( my $url = shift(@ARGV) ){
 	print "WWW::Video::Download: $url \n";
 
@@ -55,11 +88,40 @@ while( my $url = shift(@ARGV) ){
 		print " dl ($cnt of ". scalar(@playlist) ."): $_->{uri} \n";
 
 		my $filename = path($_->{path})->basename;
-		$response = $ua->get($_->{uri}, ':content_file' => $filename );
+
+# not work: got "405 method not supported", at least with akamaihd servers
+#		if(-f $filename){
+#			print " file exists: HEAD request to compare size... ";
+#			$response = $ua->head($_->{uri});
+#			if($response->is_success){
+#				if(-s $filename == $response->content_length()){	# same as $response->header('Content-Length')
+#					print " file seems complete. Skipping. \n";
+#					next;
+#				}else{
+#					print " file incomplete. Re-downloading.\n";
+#				}
+#			}else{
+#				print " failed: ". $response->status_line ."\n";
+#			}
+#		}
+
+		# enable "atomic" mode: let's tell $ua the destination filename of the next request (which is also a flag),
+		# so we can use that in the response handler callback, if nothing has been downloaded, the temp file will simply be removed
+		$ua->{hello_ua_next_filename} = $filename;
+
+		$response = $ua->get($_->{uri}, ':content_file' => $filename.'___' );
 
 		if($response->is_success){
+#			if($ua->{discard_download}){
+#				# nothing has been downloaded, the current temp file is empty, just delete it, don't clobber existing file with it
+#				unlink($filename.'___');
+#				delete($ua->{discard_download});
+#			}else{
+#				rename($filename.'___', $filename); # remedy temp file
+#			}
 			push(@done, $filename);
 		}
+#		delete($ua->{hello_ua_next_filename});
 		$cnt++;
 	}
 
@@ -71,14 +133,26 @@ while( my $url = shift(@ARGV) ){
 	my $output_filename = path($url)->basename(qr/.html/) . '.mp4'; # Path::Tiny removes '.html' only with version > 0.054
 
 	print "WWW::Video::Download: writing to file $output_filename \n";
-	system("cat @done > $output_filename");
+	my $error = system("cat @done > $output_filename");
 
-	for(@done){
-		# print " remove: $_ \n";
-		unlink($_) or die "$!";
+	my @missing;
+	unless($error){
+		for(@done){
+			# print " remove: $_ \n";
+			if(-f $_){
+				unlink($_) or die "$!";
+			}else{
+				push(@missing, $_);
+			}
+		}
 	}
 
-	die "Some fragments were not downloaded properly" unless @done == @playlist;
+#	die "Some fragments were not downloaded properly" unless @done == @playlist;
+	if(@missing){
+		print "Some fragments were not downloaded properly: \n";
+		for(@missing){ print " - $_ \n"; }
+		die;
+	}
 }
 
 # expects a bloomberg URL,

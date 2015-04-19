@@ -2,11 +2,21 @@
 
 Scripts to download web videos from websites not (yet) supported by [youtube-dl](https://github.com/rg3/youtube-dl) or [p5-www-youtube-download](https://github.com/xaicron/p5-www-youtube-download).
 
+#### cnbc-downloader.pl
+
+CNBC offers segments from their programming for Video-on-demand viewing on their website. Save these videos for later with this script.
+
+Note that CNBC offers most of their videos also via YouTube, although usually a few hours later. But in case this script here fails, you might want use a script for YouTube downloads and save a video from there.
+
+Implements a simple SMIL parser - which ended up being unused, as the video URIs found there are not usuable without some additional URL parameter or so.
+
 #### bloomberg-downloader.pl
 
 Bloomberg Television offers full shows and segments from their programming for Video-on-demand viewing on their website. Save these videos for later with this script.
 
 Implements a simple M3U parser, actually the same one as found in the n24 and n-tv scripts. It's about time to massage this here into a proper library...
+
+The Bloomberg script is the first now to faciliate a "resume" scheme - in case a 500+ segment video download fails somewhere in the middle, the script will be able to re-use already downloaded segments and continue from there. (Works by tapping into LWP hooks, and writing to temp files)
 
 #### euronews-downloader.pl
 
