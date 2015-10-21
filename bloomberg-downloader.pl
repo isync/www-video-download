@@ -176,7 +176,7 @@ sub parse_bloomberg {
  
 	die unless $response->is_success;
 
-	my $json = $response->decoded_content;
+	my $json = $response->decoded_content(charset => 'none'); # leave it in utf8
 	my $embed_metadata = decode_json($json);
 
 	my $urls = {

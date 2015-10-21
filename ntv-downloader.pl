@@ -36,6 +36,22 @@ while( my $url = shift(@ARGV) ){
 
 	my $selected = shift(@by_bandwidth);
 
+	## n-tv switched to AES encrypted HLS streaming, so:
+	my $filename = path($url)->basename('.html') . '.mp4';
+	# print "WWW::Video::Download: best m3u8 URL: $selected->{uri} \n";
+	# print " example: \$ avconv -i $selected->{uri} -acodec copy -absf aac_adtstoasc -vcodec copy $filename \n";
+	# print " example: \$ cvlc $selected->{uri} :demux=dump :demuxdump-file=$filename \n";
+
+	if(-f '/usr/bin/avconv'){
+		print "WWW::Video::Download: downloading with avconv to file $filename \n";
+		system("avconv -i $selected->{uri} -acodec copy -absf aac_adtstoasc -vcodec copy $filename");
+		next;
+	}else{
+		$response = $ua->get($urls->{mp4}, ':content_file' => $filename );
+		die "Could not get mp4" unless $response->is_success();
+		next;
+	}
+
 	## dl m3u8
 	print "WWW::Video::Download: GET:$selected->{uri} \n";
 	$response = undef;
@@ -100,13 +116,13 @@ sub parse_ntv {
 	die "Could not extract playlist URL" unless $1;
 
 	my $urls = {
-		m3u	=> 'http://video.n-tv.de' . $1,
+		m3u	=> ($1 =~ /^\/'/ ? 'http://video.n-tv.de'. $1 : $1),
 	};
 
 	## look for extra formats:
         $html =~ /\QvideoMp4: "\E([^"]+)\Q",\E/; # trailing comma
 	if($1){
-		$urls->{mp4} = 'http://video.n-tv.de' . $1;
+		$urls->{mp4} = ($1 =~ /^\/'/ ? 'http://video.n-tv.de'. $1 : $1);
 	}
 
 	print "WWW::Video::Download::parse_ntv: m3u:$urls->{m3u} mp4:$urls->{mp4} \n";
