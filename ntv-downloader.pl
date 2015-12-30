@@ -44,7 +44,9 @@ while( my $url = shift(@ARGV) ){
 
 	if(-f '/usr/bin/avconv'){
 		print "WWW::Video::Download: downloading with avconv to file $filename \n";
-		system("avconv -i $selected->{uri} -acodec copy -absf aac_adtstoasc -vcodec copy $filename");
+# http://lists.infradead.org/pipermail/get_iplayer/2012-April/002772.html
+# "Unrecognized option 'absf'" unless invoked as ffmpeg
+		system("ffmpeg -i $selected->{uri} -acodec copy -absf aac_adtstoasc -vcodec copy $filename");
 		next;
 	}else{
 		$response = $ua->get($urls->{mp4}, ':content_file' => $filename );

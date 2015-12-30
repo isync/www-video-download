@@ -35,3 +35,7 @@ Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser 
 Categories in N24's Mediathek are somehow messed up: Videos filed under 'Nachrichten', or the special category 'Wetter', either are buried so deep in 'Mediathek' you'll never find them there or they don't show up at all. Anyway, this script downloads N24 videos, once you were able to find a specific one.
 
 Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser implementation on CPAN.
+
+#### lumerias-person-downloader.pl
+
+This script parses Lumerias person appearances video collections, as found on http://www.lumerias.com/browse/persons and calls youtube-dl to download these videos, prefixed with date recorded.
