@@ -1,6 +1,8 @@
 # WWW::Video::Download
 
-Scripts to download web videos from websites not (yet) supported by [youtube-dl](https://github.com/rg3/youtube-dl) or [p5-www-youtube-download](https://github.com/xaicron/p5-www-youtube-download).
+Download web videos from websites not (yet) supported by [youtube-dl](https://github.com/rg3/youtube-dl) or [p5-www-youtube-download](https://github.com/xaicron/p5-www-youtube-download).
+
+This distribution started as a collection of scripts, one script for each site. This design is currently being phased out in favor of a Perl module/library model, with a central OO module which uses a backend of "plugins" for each site and is called, for example, with the (soon) included *video-dl* script. The deprecated "per-site" scripts are still included in this distribution.
 
 #### cnbc-downloader.pl
 
@@ -39,3 +41,7 @@ Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser 
 #### lumerias-person-downloader.pl
 
 This script parses Lumerias person appearances video collections, as found on http://www.lumerias.com/browse/persons and calls youtube-dl to download these videos, prefixed with date recorded.
+
+#### collider-downloader.pl
+
+Parses collider articles, and if a video is embedded, downloads this video from collider.com's CDN. Doesn't work on newer collider embed code.
