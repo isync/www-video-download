@@ -16,12 +16,32 @@ our $ua = LWP::UserAgent->new;
 while( my $url = shift(@ARGV) ){
 	print "WWW::Video::Download: $url \n";
 
-	unless($url =~ /www\.n24\.de/){
-		print " This doesn't look like a valid N24 URL. Skipped. \n";
+	unless($url =~ /welt\.de\/|www\.n24\.de/){
+		print " This doesn't look like a valid N24/Welt.de URL. Skipped. \n";
 		exit;
 	}
 
-	my $urls = parse_n24($url);
+	my ($urls,$hint) = parse_n24($url);
+
+	## return early with a slighly different logic for welt.de videos
+	if( $hint eq 'welt.de' ){
+		## fabricate output filename
+		my $output_filename = $urls->{title} . '.mp4';
+
+		print "WWW::Video::Download: writing to file $output_filename \n";
+		my $response = $ua->get($urls->{file}, ':content_file' => $output_filename );
+
+		if($url =~ /maira-|susanne-/i){ # wft!? weather videos are on the weather anchor's profile pages...
+			my $stamp = $response->header('Date');
+			$stamp = HTTP::Date::str2time($stamp);
+			$stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
+
+			print "Seems to be a weather video. Rename according to our legacy behaviour \n";
+			rename($output_filename, "N24-Wetter_$stamp.mp4");
+		}
+
+		exit;
+	}
 
 	## dl m3u8
 	my $response = $ua->get($urls->{m3u});
@@ -90,6 +110,48 @@ sub parse_n24 {
 	die unless $response->is_success;
 
 	my $html = $response->decoded_content;
+
+	## return early on newer welt.de layout
+	if( $html =~ / funkotron / ){
+		print "welt.de layout detected\n";
+		require JSON;
+		require Data::Dumper;
+
+		my $line;
+		for( split("\n", $html) ){
+			if($_ =~ /sectionVideoAd/){
+				$line = $_;
+				last;
+			}
+		}
+
+		# print $line;
+
+		my $json = JSON->new->relaxed;
+		my $ref = $json->decode('{'.$line.'}') or die $!;
+
+		# n24/welt provides 4 versions, with 720p being the best, and one dynamic m3u8 playlist with .ts files
+		# where the "sources ref" is array element 1, or element 0 sometimes...
+		my $sources_ref;
+		for( @{ $ref->{page}->{content}->{media} } ){
+			$sources_ref = $_;
+			last if $sources_ref->{sources};
+		}
+
+		print Data::Dumper::Dumper( $sources_ref );
+
+		die "Could not extract JSON data" unless $ref && $sources_ref;
+
+		my $urls = {
+			title	=> $sources_ref->{title},
+			file	=> $sources_ref->{file},
+		};
+
+		print "WWW::Video::Download::parse_n24: file:$urls->{file} \n";
+		return ($urls, 'welt.de'); # second return value is a hint to tell our processing logic to treat returned data as coming from welt.de
+	}
+
+	## legacy n24
 
 	#				_n24VideoCfg.html5.videoMp4Source = "http://n24video-vod.dcp.adaptive.level3.net/cm2013/cmp/dd ...";
 	#				_n24VideoCfg.html5.videoOgvSource = "---";

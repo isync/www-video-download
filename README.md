@@ -36,6 +36,8 @@ Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser 
 
 Categories in N24's Mediathek are somehow messed up: Videos filed under 'Nachrichten', or the special category 'Wetter', either are buried so deep in 'Mediathek' you'll never find them there or they don't show up at all. Anyway, this script downloads N24 videos, once you were able to find a specific one.
 
+Since N24's merge with welt.de it's even more messed up. Anyway, the script has been updated to parse the new welt.de article pages with embedded videos.
+
 Implements a simple M3U parser (M3U8), as I couldn't find a good/fitting parser implementation on CPAN.
 
 #### lumerias-person-downloader.pl
