@@ -138,7 +138,7 @@ sub parse_n24 {
 			last if $sources_ref->{sources};
 		}
 
-		print Data::Dumper::Dumper( $sources_ref );
+		# print Data::Dumper::Dumper( $sources_ref );
 
 		die "Could not extract JSON data" unless $ref && $sources_ref;
 
