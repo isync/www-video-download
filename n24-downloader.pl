@@ -37,7 +37,11 @@ while( my $url = shift(@ARGV) ){
 			$stamp = POSIX::strftime("%Y_%m_%d", localtime($stamp));
 
 			print "Seems to be a weather video. Rename according to our legacy behaviour \n";
-			rename($output_filename, "N24-Wetter_$stamp.mp4");
+			if(-f "N24-Wetter_$stamp.mp4"){
+				rename($output_filename, "N24-Wetter_". $stamp ."_". time() .".mp4");
+			}else{
+				rename($output_filename, "N24-Wetter_". $stamp .".mp4");
+			}
 		}
 
 		exit;
@@ -113,13 +117,13 @@ sub parse_n24 {
 
 	## return early on newer welt.de layout
 	if( $html =~ / funkotron / ){
-		print "welt.de layout detected\n";
+		print " welt.de layout detected\n";
 		require JSON;
 		require Data::Dumper;
 
 		my $line;
 		for( split("\n", $html) ){
-			if($_ =~ /sectionVideoAd/){
+			if($_ =~ /trackingData|sectionVideoAd/){
 				$line = $_;
 				last;
 			}
@@ -129,6 +133,38 @@ sub parse_n24 {
 
 		my $json = JSON->new->relaxed;
 		my $ref = $json->decode('{'.$line.'}') or die $!;
+		# print Data::Dumper::Dumper( $ref );
+
+		## return early if newer layout
+		if( !defined($ref->{page}->{content}->{media}) && $html =~ /data-content="VideoPlayer.Config/){
+			print " newer separate player config detected\n";
+
+			my $found_line;
+			for( split("\n", $html) ){
+				if($_ =~ /data-content="VideoPlayer\.Config/){
+					$found_line = 1;
+					next;
+				}
+				if($found_line){
+					$line = $_;
+					last;
+				}
+			}
+
+			# die $line;
+
+			my $sources_ref = $json->decode($line) or die $!;
+			die "Could not extract JSON data" unless $sources_ref;
+			# print Data::Dumper::Dumper( $sources_ref );
+
+			my $urls = {
+				title	=> $sources_ref->{title},
+				file	=> $sources_ref->{sources}->[0]->{src},
+			};
+
+			print "WWW::Video::Download::parse_n24: file:$urls->{file} \n";
+			return ($urls, 'welt.de'); # second return value is a hint to tell our processing logic to treat returned data as coming from welt.de
+		}
 
 		# n24/welt provides 4 versions, with 720p being the best, and one dynamic m3u8 playlist with .ts files
 		# where the "sources ref" is array element 1, or element 0 sometimes...
@@ -138,7 +174,7 @@ sub parse_n24 {
 			last if $sources_ref->{sources};
 		}
 
-		# print Data::Dumper::Dumper( $sources_ref );
+		# print $html . Data::Dumper::Dumper( $sources_ref );
 
 		die "Could not extract JSON data" unless $ref && $sources_ref;
 

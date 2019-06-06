@@ -19,7 +19,7 @@ $ua->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 while( my $url = shift(@ARGV) ){
 	print "WWW::Video::Download: $url \n";
 
-	unless($url =~ /video\.cnbc\.com/){
+	unless($url =~ /video\.cnbc\.com|www\.cnbc\.com\/video\//){
 		print " This doesn't look like a valid CNBC video URL. Skipped. \n";
 		next;
 	}
